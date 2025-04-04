@@ -1,0 +1,9 @@
+name: rendering
+version: 1.0.0
+appVersion: latest
+apiVersion: v1
+description: SWP Rendering Helm Chart
+icon: https://www.adecco.com/~/media/adeccogroup/brands/adecco-global-2016/corporate/media/home/images/adecco-logo.png
+maintainers:
+  - name: Adecco Cloud Platform
+    email: cloudengineers@adeccogroup.com

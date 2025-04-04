@@ -1,0 +1,44 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "rendering.stackName" . }}
+  namespace: {{ .Values.namespace }}
+data:
+  azure-aks-sitecore-cd-url: http://cd-{{ .Values.stackVersion }}
+  sitecore-jss-sites-config: {{ .Values.configmap.sitecore_jss_sites_config }}
+  sitecore-preview-url: {{ .Values.configmap.sitecore_preview_url }}
+  sitecore-public-url: {{ .Values.configmap.sitecore_public_url }}
+  azure-identifier: {{ .Values.configmap.azure_identifier }}
+  rendering-apim-singlewebplatform-url: {{ .Values.configmap.rendering_apim_singlewebplatform_url }}
+  apiversion-b64: {{ .Files.Get "apiversion.json" | b64enc }}
+  adecco_candidate_portal: {{ .Values.configmap.adecco_candidate_portal }}
+  cache_revalidation_time: "{{ .Values.configmap.cache_revalidation_time }}"
+  rendering-enable-isr: "{{ .Values.configmap.rendering_enable_isr }}"
+  swp_dictionary_api_endpoint: "{{ .Values.configmap.swp_dictionary_api_endpoint }}"
+  use_swp_dictionary: "{{ .Values.configmap.use_swp_dictionary }}"
+  job_details_max_age: "{{ .Values.configmap.job_details_max_age }}"
+  job_details_stale_while_revalidate: "{{ .Values.configmap.job_details_stale_while_revalidate }}"
+  job_title_autocomplete_max_age : "{{ .Values.configmap.job_title_autocomplete_max_age }}"
+  job_title_autocomplete_stale_while_revalidate: "{{ .Values.configmap.job_title_autocomplete_stale_while_revalidate }}"
+{{- if and (eq .Values.stackVersion "1") (eq .Values.location "eur-nl") }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "rendering.cm" . }}
+  namespace: {{ .Values.namespace }}
+data:
+  azure-aks-sitecore-cm-url: http://cm
+  sitecore-jss-sites-config: {{ .Values.configmap.sitecore_jss_sites_config }}
+  sitecore-preview-url: {{ .Values.configmap.sitecore_preview_url }}
+  sitecore-public-url: {{ .Values.configmap.sitecore_public_url }}
+  azure-identifier: {{ .Values.configmap.azure_identifier }}
+  rendering-apim-singlewebplatform-url: {{ .Values.configmap.rendering_apim_singlewebplatform_url }}
+  apiversion-b64: {{ .Files.Get "apiversion.json" | b64enc }}
+  adecco_candidate_portal: {{ .Values.configmap.adecco_candidate_portal }}
+  cache_revalidation_time: "{{ .Values.configmap.cache_revalidation_time }}"
+  rendering-enable-isr: "{{ .Values.configmap.rendering_enable_isr }}"
+  swp_dictionary_api_endpoint: "{{ .Values.configmap.swp_dictionary_api_endpoint }}"
+  use_swp_dictionary: "{{ .Values.configmap.use_swp_dictionary }}"
+{{- end }}

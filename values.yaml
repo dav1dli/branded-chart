@@ -1,0 +1,60 @@
+namespace: swp
+
+secret:
+  sitecore_jss_editing_secret: '#{sitecore-jss-editing-secret}#'
+  sitecore_akm_am5_charts: '#{sitecore-akm-am5-charts}#'
+  sitecore_akm_am5_maps: '#{sitecore-akm-am5-maps}#'
+  sitecore_api_key: '#{SITECORE_API_KEY}#'
+  rendering_apim_singlewebplatform_subscription_key: '#{rendering-apim-singlewebplatform-subscription-key}#'
+  rendering_cache_storage_account_key: '#{CACHE_STORAGE_ACCOUNT_ACCESS_KEY}#'
+  rendering_cache_storage_account_name: '#{CACHE_STORAGE_ACCOUNT_NAME}#'
+  google_maps_api_key: '#{GOOGLE_MAPS_API_KEY}#'
+
+annotations:
+  business_service: #{tag_business_service_name}#
+  business_service_name: #{tag_business_service_name}#
+  business_service_id: #{tag_business_service_id}#
+  country: #{tag_country}#
+  application_name: #{tag_application_name}#
+  environment: #{tag_environment}#
+
+deployment:
+  replicas: #{replica_count}#
+  replicasJobsApi: #{replica_count_jobsapi}#
+
+memory:
+  rendering_requests: #{rendering_memory_requests}#
+  rendering_limits: #{rendering_memory_limits}#
+  cm_rendering_requests: #{cm_rendering_memory_requests}#
+  cm_rendering_limits: #{cm_rendering_memory_limits}#
+
+cpu:
+  rendering_requests: #{rendering_cpu_requests}#
+  rendering_limits: #{rendering_cpu_limits}#
+  cm_rendering_requests: #{cm_rendering_cpu_requests}#
+  cm_rendering_limits: #{cm_rendering_cpu_limits}#
+
+configmap:
+  sitecore_jss_sites_config: #{JSS_SITES_CONFIG}#
+  sitecore_preview_url: #{sitecore_preview_url}#
+  sitecore_public_url: #{PUBLIC_URL}#
+  azure_identifier: #{azure_identifier}#
+  rendering_apim_singlewebplatform_url: #{apim_url}#/single-web-platform
+  adecco_candidate_portal: #{adecco_candidate_portal}#
+  cache_revalidation_time: #{CACHE_REVALIDATION_TIME}#
+  rendering_enable_isr: #{RENDERING_ENABLE_ISR}#
+  swp_dictionary_api_endpoint: #{swp_dictionary_api_endpoint}#
+  use_swp_dictionary: #{use_swp_dictionary}#
+  job_details_max_age: '#{job_details_max_age}#'
+  job_details_stale_while_revalidate: '#{job_details_stale_while_revalidate}#'
+  job_title_autocomplete_max_age : '#{job_title_autocomplete_max_age}#'
+  job_title_autocomplete_stale_while_revalidate: '#{job_title_autocomplete_stale_while_revalidate}#'
+
+hpa:
+  cpu: '#{HPA_CPU}#'
+  memory: '#{HPA_MEMORY}#'
+  min: '#{HPA_MIN_REPLICAS}#'
+  max: '#{HPA_MAX_REPLICAS}#'
+
+pdb:
+  minAvailable: '#{PDB_MIN_AVAILABLE}#'

@@ -1,0 +1,438 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "rendering.stackName" . }}
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: {{ include "rendering.stackName" . }}
+spec:
+  replicas: {{ .Values.deployment.replicas }}
+  selector:
+    matchLabels:
+      app: {{ include "rendering.stackName" . }}
+  template:
+    metadata:
+      labels:
+        app: {{ include "rendering.stackName" . }}
+      annotations:
+        {{- include "rendering.annotations" . | nindent 8 }}
+    spec:
+      automountServiceAccountToken: false
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - {{ include "rendering.stackName" . }}
+              topologyKey: "failure-domain.beta.kubernetes.io/zone"
+            weight: 100
+      securityContext:
+        runAsUser: 1000
+      nodeSelector:
+        kubernetes.azure.com/agentpool: linux01
+        kubernetes.azure.com/mode: user
+        kubernetes.io/os: linux
+      initContainers:
+      - name: rendering-cfg
+        image: {{ include "rendering.image" . }}
+        imagePullPolicy: Always
+        command:
+        - "/bin/sh"
+        - "-c"
+        - "/app/init-env-specific-config.sh"
+        env:
+        - name: AKM_AM5_CHARTS
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "rendering.stackName" . }}
+              key: akm-am5-charts
+        - name: AKM_AM5_MAPS
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "rendering.stackName" . }}
+              key: akm-am5-maps
+        - name: AZURE_IDENTIFIER
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "rendering.stackName" . }}
+              key: azure-identifier
+        - name: JSS_EDITING_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "rendering.stackName" . }}
+              key: sitecore-jss-editing-secret
+        - name: JSS_SITES_CONFIG
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "rendering.stackName" . }}
+              key: sitecore-jss-sites-config
+        - name: APIM_SINGLEWEBPLATFORM_SUBSCRIPTION_KEY
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "rendering.stackName" . }}
+              key: rendering-apim-singlewebplatform-subscription-key
+        - name: APIM_SINGLEWEBPLATFORM_URL
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "rendering.stackName" . }}
+              key: rendering-apim-singlewebplatform-url
+        - name: PREVIEW_URL
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "rendering.stackName" . }}
+              key: sitecore-preview-url
+        - name: PUBLIC_URL
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "rendering.stackName" . }}
+              key: sitecore-public-url
+        - name: SITECORE_API_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "rendering.stackName" . }}
+              key: azure-aks-sitecore-cd-url
+        - name: VERSION_API_BODY_B64
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "rendering.stackName" . }}
+              key: apiversion-b64
+        - name: ADECCO_CANDIDATE_PORTAL
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "rendering.stackName" . }}
+              key: adecco_candidate_portal
+        - name: SITECORE_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "rendering.stackName" . }}
+              key: sitecore-api-key
+        - name: GOOGLE_MAPS_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "rendering.stackName" . }}
+              key: google-maps-api-key
+        - name: CACHE_REVALIDATION_TIME
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "rendering.stackName" . }}
+              key: cache_revalidation_time
+        - name: RENDERING_ENABLE_ISR
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "rendering.stackName" . }}
+              key: rendering-enable-isr
+        - name: SWP_DICTIONARY_API_ENDPOINT
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "rendering.stackName" . }}
+              key: swp_dictionary_api_endpoint
+        - name: USE_SWP_DICTIONARY
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "rendering.stackName" . }}
+              key: use_swp_dictionary
+        - name: JOB_DETAIL_MAX_AGE
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "rendering.stackName" . }}
+              key: job_details_max_age
+        - name: JOB_DETAIL_STALE_WHILE_REVALIDATE
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "rendering.stackName" . }}
+              key: job_details_stale_while_revalidate
+        - name: JOB_TITLE_AUTOCOMPLETE_MAX_AGE 
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "rendering.stackName" . }}
+              key: job_title_autocomplete_max_age
+        - name: JOB_TITLE_AUTOCOMPLETE_STALE_WHILE_REVALIDATE 
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "rendering.stackName" . }}
+              key: job_title_autocomplete_stale_while_revalidate
+        volumeMounts:
+        - name: rendering-cfg-env
+          mountPath: /cfg-env
+        - name: rendering-cfg-routes-manifest
+          mountPath: /cfg-routes-manifest
+      containers:
+      - name: {{ include "rendering.stackName" . }}
+        image: {{ include "rendering.image" . }}
+        ports:
+        - containerPort: 3000
+        imagePullPolicy: Always
+        livenessProbe:
+          httpGet:
+            path: /healthz/live
+            port: 3000
+            httpHeaders:
+            - name: X-Kubernetes-Probe
+              value: Liveness
+          timeoutSeconds: 300
+          periodSeconds: 30
+          failureThreshold: 3
+        startupProbe:
+          httpGet:
+            path: /healthz/ready
+            port: 3000
+            httpHeaders:
+            - name: X-Kubernetes-Probe
+              value: Startup
+          timeoutSeconds: 300
+          periodSeconds: 30
+          failureThreshold: 10
+        resources:
+          requests:
+            memory: {{ .Values.memory.rendering_requests }}
+            cpu: {{ .Values.cpu.rendering_requests }}
+          limits:
+            memory: {{ .Values.memory.rendering_limits }}
+            cpu: {{ .Values.cpu.rendering_limits }}
+        volumeMounts:
+        - name: rendering-cfg-env
+          mountPath: /app/.env
+          subPath: .env
+        - name: rendering-cfg-routes-manifest
+          mountPath: /app/.next/routes-manifest.json
+          subPath: routes-manifest.json
+        - name: rendering-static-cache-{{ .Values.stackVersion }}
+          mountPath: /app/.next/server
+          subPath: {{ include "rendering.image_version_tag" . }}
+        - name: jobfeeds-rendering
+          mountPath: /opt/jobfeeds
+        - name: jobreports-rendering-{{ .Values.stackVersion }}
+          mountPath: /opt/jobreports
+      volumes:
+      - name: rendering-cfg-env
+        emptyDir: {}
+      - name: rendering-cfg-routes-manifest
+        emptyDir: {}
+      - name: rendering-static-cache-{{ .Values.stackVersion }}
+        persistentVolumeClaim:
+          claimName: rendering-static-cache-{{ .Values.stackVersion }}
+      - name: jobfeeds-rendering
+        persistentVolumeClaim:
+          claimName: jobfeeds-rendering
+      - name: jobreports-rendering-{{ .Values.stackVersion }}
+        persistentVolumeClaim:
+          claimName: jobreports-rendering-{{ .Values.stackVersion }}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "rendering.stackName" . }}-hpa
+  namespace: {{ .Values.namespace }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "rendering.stackName" . }}
+  minReplicas: {{ .Values.hpa.min }}
+  maxReplicas: {{ .Values.hpa.max }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.hpa.cpu }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.hpa.memory }}
+{{- if and (eq .Values.stackVersion "1") (eq .Values.location "eur-nl") }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "rendering.cm" . }}
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: {{ include "rendering.cm" . }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ include "rendering.cm" . }}
+  template:
+    metadata:
+      labels:
+        app: {{ include "rendering.cm" . }}
+      annotations:
+        {{- include "rendering.annotations" . | nindent 8 }}
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsUser: 1000
+      nodeSelector:
+        kubernetes.azure.com/agentpool: linux01
+        kubernetes.azure.com/mode: user
+        kubernetes.io/os: linux
+      initContainers:
+      - name: rendering-cfg
+        image: {{ include "rendering.image" . }}
+        imagePullPolicy: Always
+        command:
+        - "/bin/sh"
+        - "-c"
+        - "/app/init-env-specific-config.sh"
+        env:
+        - name: AKM_AM5_CHARTS
+          valueFrom:
+            secretKeyRef:
+              name: rendering-cm
+              key: akm-am5-charts
+        - name: AKM_AM5_MAPS
+          valueFrom:
+            secretKeyRef:
+              name: rendering-cm
+              key: akm-am5-maps
+        - name: AZURE_IDENTIFIER
+          valueFrom:
+            configMapKeyRef:
+              name: rendering-cm
+              key: azure-identifier
+        - name: JSS_EDITING_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: rendering-cm
+              key: sitecore-jss-editing-secret
+        - name: JSS_SITES_CONFIG
+          valueFrom:
+            configMapKeyRef:
+              name: rendering-cm
+              key: sitecore-jss-sites-config
+        - name: APIM_SINGLEWEBPLATFORM_SUBSCRIPTION_KEY
+          valueFrom:
+            secretKeyRef:
+              name: rendering-cm
+              key: rendering-apim-singlewebplatform-subscription-key
+        - name: APIM_SINGLEWEBPLATFORM_URL
+          valueFrom:
+            configMapKeyRef:
+              name: rendering-cm
+              key: rendering-apim-singlewebplatform-url
+        - name: PREVIEW_URL
+          valueFrom:
+            configMapKeyRef:
+              name: rendering-cm
+              key: sitecore-preview-url
+        - name: PUBLIC_URL
+          valueFrom:
+            configMapKeyRef:
+              name: rendering-cm
+              key: sitecore-public-url
+        - name: SITECORE_API_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: rendering-cm
+              key: azure-aks-sitecore-cm-url
+        - name: VERSION_API_BODY_B64
+          valueFrom:
+            configMapKeyRef:
+              name: rendering-cm
+              key: apiversion-b64
+        - name: ADECCO_CANDIDATE_PORTAL
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "rendering.stackName" . }}
+              key: adecco_candidate_portal
+        - name: SITECORE_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: rendering-cm
+              key: sitecore-api-key
+        - name: GOOGLE_MAPS_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "rendering.stackName" . }}
+              key: google-maps-api-key
+        - name: CACHE_REVALIDATION_TIME
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "rendering.stackName" . }}
+              key: cache_revalidation_time
+        - name: RENDERING_ENABLE_ISR
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "rendering.stackName" . }}
+              key: rendering-enable-isr
+        - name: SWP_DICTIONARY_API_ENDPOINT
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "rendering.stackName" . }}
+              key: swp_dictionary_api_endpoint
+        - name: USE_SWP_DICTIONARY
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "rendering.stackName" . }}
+              key: use_swp_dictionary
+        volumeMounts:
+        - name: rendering-cfg-env
+          mountPath: /cfg-env
+        - name: rendering-cfg-routes-manifest
+          mountPath: /cfg-routes-manifest
+      containers:
+      - name: rendering-cm
+        image: {{ include "rendering.image" . }}
+        ports:
+        - containerPort: 3000
+        imagePullPolicy: Always
+        livenessProbe:
+          httpGet:
+            path: /healthz/live
+            port: 3000
+            httpHeaders:
+            - name: X-Kubernetes-Probe
+              value: Liveness
+          timeoutSeconds: 300
+          periodSeconds: 30
+          failureThreshold: 3
+        startupProbe:
+          httpGet:
+            path: /healthz/ready
+            port: 3000
+            httpHeaders:
+            - name: X-Kubernetes-Probe
+              value: Startup
+          timeoutSeconds: 300
+          periodSeconds: 30
+          failureThreshold: 10
+        resources:
+          requests:
+            memory: {{ .Values.memory.cm_rendering_requests }}
+            cpu: {{ .Values.cpu.cm_rendering_requests }}
+          limits:
+            memory: {{ .Values.memory.cm_rendering_limits }}
+            cpu: {{ .Values.cpu.cm_rendering_limits }}
+        volumeMounts:
+        - name: rendering-cfg-env
+          mountPath: /app/.env
+          subPath: .env
+        - name: rendering-cfg-routes-manifest
+          mountPath: /app/.next/routes-manifest.json
+          subPath: routes-manifest.json
+      volumes:
+      - name: rendering-cfg-env
+        emptyDir: {}
+      - name: rendering-cfg-routes-manifest
+        emptyDir: {}
+{{- end }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "rendering.stackName" . }}-pdb
+  namespace: {{ .Values.namespace }}
+spec:
+  minAvailable: {{ .Values.pdb.minAvailable }}
+  selector:
+    matchLabels:
+      app: {{ include "rendering.stackName" . }}
